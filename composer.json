@@ -1,0 +1,7 @@
+{
+    "name": "webshortcut/website",
+    "description": "WebShortcut marketing website — contact form mailer",
+    "require": {
+        "phpmailer/phpmailer": "^7.0"
+    }
+}

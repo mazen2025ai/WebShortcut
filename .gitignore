@@ -1,0 +1,26 @@
+# ── Secrets ──────────────────────────────────────────────────
+config.php
+# (commit config.example.php — that's the safe template)
+.env
+
+# ── Runtime logs ─────────────────────────────────────────────
+logs/*
+!logs/.gitkeep
+*.log
+
+# ── Claude / IDE / OS ────────────────────────────────────────
+.claude/
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# ── Local-only ───────────────────────────────────────────────
+*.tmp
+*.bak
+*.local
+*.zip
+node_modules/
