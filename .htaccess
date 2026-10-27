@@ -34,7 +34,7 @@ DirectoryIndex index.html index.php
 <FilesMatch "\.(log|md|json|lock|sql|bak|old|tmp|ini|env)$">
   Require all denied
 </FilesMatch>
-RedirectMatch 404 (^|/)(\.git|logs|vendor|docs)(/|$)
+RedirectMatch 404 (^|/)(\.git|logs|vendor|docs|_old_wordpress)(/|$)
 
 # ---- Security headers ----
 <IfModule mod_headers.c>
