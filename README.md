@@ -21,7 +21,7 @@ logs/                 Mail log (gitignored)
 
 ## Sections
 
-Hero (with the animated "talk to your ERP" console) · Stats · Who we are · UNO.NET ERP modules and the UNO AI Assistant · AI Projects (data-to-AI pipeline, six project types, four delivery steps) · Solutions & Services · Projects and client logos · CTA · Plans · Leading Innovation checklist · About, timeline, pillars, support · FAQ · Contact · Footer.
+Hero (with the animated "talk to your ERP" console) · Stats · Who we are · UNO.NET ERP modules and the UNO AI Assistant · AI Projects (data-to-AI pipeline, six project types, four delivery steps) · Solutions & Services · Projects and client logos · CTA · Leading Innovation checklist · About, timeline, pillars, support · FAQ · Contact · Footer.
 
 ## Run locally
 

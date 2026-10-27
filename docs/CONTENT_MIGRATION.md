@@ -18,7 +18,7 @@ The ERP product site http://unodotnet.com/ returned HTTP 500 during the migratio
 | About | Mission / Philosophy / Vision / Strategy (headings only on the old site) | Four pillar cards, text written new |
 | About | Skill bars (mobile 70, web 90, UI 60) | Skills bars (ERP 95, web 90, AI 85, mobile 70) |
 | About | "Leading Innovation" buyer questions (8) | Innovation checklist (+3 AI questions) |
-| Services | Economy / Premium packages | Plans section (+ AI Business plan) |
+| Services | Economy / Premium packages | Dropped on 2026-10-27 at the owner's request (no pricing section) |
 | Projects | Nine client logos with links | Clients grid |
 | FAQs | "Our Support Team will Always Assist You 24/7" + For Partners / Customers / Startups | Support cards under About (texts re-matched to their headings) |
 | Contact | Address, phone, "respond within 24 hours" | Contact section and footer |
