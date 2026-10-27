@@ -159,15 +159,16 @@ jobs:
         if: ${{ github.event.inputs.dry_run == 'false' }}
         run: |
           sleep 5
-          echo "home:          $(curl -s -o /dev/null -w '%{http_code}' https://webshortcut.net/)"
-          echo "title:         $(curl -s https://webshortcut.net/ | grep -oE '<title>[^<]*' | head -1)"
-          echo "http->https:   $(curl -s -o /dev/null -w '%{http_code} -> %{redirect_url}' http://webshortcut.net/)"
-          echo "config.php:    $(curl -s -o /dev/null -w '%{http_code}' https://webshortcut.net/config.php)"
-          echo "logs/:         $(curl -s -o /dev/null -w '%{http_code}' https://webshortcut.net/logs/)"
-          echo "wp-login.php:  $(curl -s -o /dev/null -w '%{http_code}' https://webshortcut.net/wp-login.php)"
-          echo "wp-admin/:     $(curl -s -o /dev/null -w '%{http_code}' https://webshortcut.net/wp-admin/)"
-          echo "contact form:  $(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Origin: https://evil.example' https://webshortcut.net/send_email.php) (403 expected)"
-          echo "security.txt:  $(curl -s -o /dev/null -w '%{http_code}' https://webshortcut.net/.well-known/security.txt)"
+          UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"  # Mod_Security on the host rejects bare curl UAs with 406
+          echo "home:          $(curl -s -A "$UA" -o /dev/null -w '%{http_code}' https://webshortcut.net/)"
+          echo "title:         $(curl -s -A "$UA" https://webshortcut.net/ | grep -oE '<title>[^<]*' | head -1)"
+          echo "http->https:   $(curl -s -A "$UA" -o /dev/null -w '%{http_code} -> %{redirect_url}' http://webshortcut.net/)"
+          echo "config.php:    $(curl -s -A "$UA" -o /dev/null -w '%{http_code}' https://webshortcut.net/config.php)"
+          echo "logs/:         $(curl -s -A "$UA" -o /dev/null -w '%{http_code}' https://webshortcut.net/logs/)"
+          echo "wp-login.php:  $(curl -s -A "$UA" -o /dev/null -w '%{http_code}' https://webshortcut.net/wp-login.php)"
+          echo "wp-admin/:     $(curl -s -A "$UA" -o /dev/null -w '%{http_code}' https://webshortcut.net/wp-admin/)"
+          echo "contact form:  $(curl -s -A "$UA" -o /dev/null -w '%{http_code}' -X POST -H 'Origin: https://evil.example' https://webshortcut.net/send_email.php) (403 expected)"
+          echo "security.txt:  $(curl -s -A "$UA" -o /dev/null -w '%{http_code}' https://webshortcut.net/.well-known/security.txt)"
           echo "--- headers ---"
-          curl -sI https://webshortcut.net/ | grep -iE '^(strict-transport|content-security|x-frame|x-content-type|referrer-policy|permissions-policy)'
-          echo "Remember: create /public_html/config.php on the server by hand (see config.example.php)."
+          curl -sI -A "$UA" https://webshortcut.net/ | grep -iE '^(strict-transport|content-security|x-frame|x-content-type|referrer-policy|permissions-policy)'
+          echo "config.php is created on the server by hand (see config.example.php) and is never uploaded or deleted by this workflow."
