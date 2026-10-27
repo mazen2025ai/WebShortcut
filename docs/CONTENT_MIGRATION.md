@@ -14,7 +14,7 @@ The ERP product site http://unodotnet.com/ returned HTTP 500 during the migratio
 | Home | Six service cards (Software Solution, Mobile, Hosting, Graphic & Web Design, Maintenance & Service Centers, Security) + Web Development, Data Analytics | Services grid (8 cards, AI note on each) |
 | Home | "Introduce Our Projects" + Machine Learning / AI / Augmented Reality | Projects section (three cards) and AI Projects section |
 | About | "Who We Are?" two paragraphs | About headline text |
-| About | History (1990, 2007, CTO 17 years, Microsoft certifications, smart cards, 80+ websites) | About timeline and paragraph |
+| About | History (1990, 2007, CTO 17 years, Microsoft certifications, smart cards, 80+ websites, raised to 400+ by the owner on 2026-10-27) | About timeline and paragraph |
 | About | Mission / Philosophy / Vision / Strategy (headings only on the old site) | Four pillar cards, text written new |
 | About | Skill bars (mobile 70, web 90, UI 60) | Skills bars (ERP 95, web 90, AI 85, mobile 70) |
 | About | "Leading Innovation" buyer questions (8) | Innovation checklist (+3 AI questions) |
