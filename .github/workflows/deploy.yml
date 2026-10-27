@@ -19,10 +19,12 @@
 #   - FTP_ADDRESS is the ORIGIN IP (192.185.196.234, HostGator), because webshortcut.net and
 #     ftp.webshortcut.net are proxied by Cloudflare and do not carry FTP.
 #   - The server's Pure-FTPd does not complete an explicit-TLS handshake, so protocol is plain ftp.
-#   - FTP_USER is a dedicated cPanel FTP account JAILED to its directory, which MUST be
-#     public_html. Its root is therefore "/" below, not "/public_html/".
-#   - Because the jail cannot reach outside public_html, the archived WordPress files go to
-#     /_old_wordpress/ (denied over the web by .htaccess).
+#   - FTP_USER is a dedicated cPanel FTP account whose root is the cPanel HOME directory
+#     (/home/webshort). The site lives in /public_html/; the archived WordPress files go to
+#     /public_html_old_wordpress/, outside the web root.
+#   - Wordfence hooks PHP through public_html/.user.ini (auto_prepend_file=wordfence-waf.php);
+#     both files are moved together or every PHP request would fail.
+#   - google1738ee9869a26d08.html (Search Console verification) and cgi-bin/ stay in place.
 #
 # Never uploaded: config.php (created on the server by hand), logs/, docs/, *.md,
 # .git, .github, composer files, IDE and OS junk.
@@ -72,42 +74,46 @@ jobs:
           FTP_PASS: ${{ secrets.FTP_PASS }}
         run: |
           sudo apt-get install -y -qq lftp > /dev/null
-          printf 'Require all denied\n' > /tmp/deny.htaccess
           cat > /tmp/archive.lftp <<'EOF'
           set ftp:ssl-allow no
           set cmd:fail-exit false
           set net:timeout 30
           set net:max-retries 2
-          mkdir -p /_old_wordpress
-          put /tmp/deny.htaccess -o /_old_wordpress/.htaccess
-          cd /
-          mv wp-admin    /_old_wordpress/wp-admin
-          mv wp-includes /_old_wordpress/wp-includes
-          mv wp-content  /_old_wordpress/wp-content
-          mv index.php              /_old_wordpress/index.php
-          mv .htaccess              /_old_wordpress/root.htaccess
-          mv wp-config.php          /_old_wordpress/wp-config.php
-          mv wp-config-sample.php   /_old_wordpress/wp-config-sample.php
-          mv wp-login.php           /_old_wordpress/wp-login.php
-          mv wp-load.php            /_old_wordpress/wp-load.php
-          mv wp-settings.php        /_old_wordpress/wp-settings.php
-          mv wp-blog-header.php     /_old_wordpress/wp-blog-header.php
-          mv wp-cron.php            /_old_wordpress/wp-cron.php
-          mv wp-activate.php        /_old_wordpress/wp-activate.php
-          mv wp-comments-post.php   /_old_wordpress/wp-comments-post.php
-          mv wp-links-opml.php      /_old_wordpress/wp-links-opml.php
-          mv wp-mail.php            /_old_wordpress/wp-mail.php
-          mv wp-signup.php          /_old_wordpress/wp-signup.php
-          mv wp-trackback.php       /_old_wordpress/wp-trackback.php
-          mv xmlrpc.php             /_old_wordpress/xmlrpc.php
-          mv readme.html            /_old_wordpress/readme.html
-          mv license.txt            /_old_wordpress/license.txt
-          echo "--- site root after archiving ---"
+          mkdir -p /public_html_old_wordpress
+          cd /public_html
+          mv wp-admin    /public_html_old_wordpress/wp-admin
+          mv wp-includes /public_html_old_wordpress/wp-includes
+          mv wp-content  /public_html_old_wordpress/wp-content
+          mv index.php              /public_html_old_wordpress/index.php
+          mv .htaccess              /public_html_old_wordpress/.htaccess
+          mv .user.ini              /public_html_old_wordpress/.user.ini
+          mv .user.ini.bak.20Oct2026-CVE /public_html_old_wordpress/.user.ini.bak.20Oct2026-CVE
+          mv wordfence-waf.php      /public_html_old_wordpress/wordfence-waf.php
+          mv wp-config.php          /public_html_old_wordpress/wp-config.php
+          mv wp-config-sample.php   /public_html_old_wordpress/wp-config-sample.php
+          mv wp-login.php           /public_html_old_wordpress/wp-login.php
+          mv wp-load.php            /public_html_old_wordpress/wp-load.php
+          mv wp-settings.php        /public_html_old_wordpress/wp-settings.php
+          mv wp-settings.php.bak    /public_html_old_wordpress/wp-settings.php.bak
+          mv wp-blog-header.php     /public_html_old_wordpress/wp-blog-header.php
+          mv wp-cron.php            /public_html_old_wordpress/wp-cron.php
+          mv wp-activate.php        /public_html_old_wordpress/wp-activate.php
+          mv wp-comments-post.php   /public_html_old_wordpress/wp-comments-post.php
+          mv wp-links-opml.php      /public_html_old_wordpress/wp-links-opml.php
+          mv wp-mail.php            /public_html_old_wordpress/wp-mail.php
+          mv wp-signup.php          /public_html_old_wordpress/wp-signup.php
+          mv wp-trackback.php       /public_html_old_wordpress/wp-trackback.php
+          mv xmlrpc.php             /public_html_old_wordpress/xmlrpc.php
+          mv readme.html            /public_html_old_wordpress/readme.html
+          mv readme.66881d61aa6b5fc10dfa5dfca1bc7105.html /public_html_old_wordpress/readme.66881d61aa6b5fc10dfa5dfca1bc7105.html
+          mv license.txt            /public_html_old_wordpress/license.txt
+          mv .files.list            /public_html_old_wordpress/.files.list
+          echo "--- public_html after archiving ---"
           cls -la
           quit
           EOF
           lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -f /tmp/archive.lftp
-          echo "WordPress files moved to /_old_wordpress inside public_html, web access denied (a missing file just prints an error and continues)."
+          echo "WordPress files moved to /public_html_old_wordpress, outside the web root (a missing file just prints an error and continues)."
 
       - name: Sync the site to public_html via FTPS
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -117,7 +123,7 @@ jobs:
           password: ${{ secrets.FTP_PASS }}
           protocol: ftp
           local-dir: ./
-          server-dir: /
+          server-dir: /public_html/
           dry-run: ${{ github.event.inputs.dry_run == 'true' }}
           exclude: |
             .git*
@@ -159,7 +165,8 @@ jobs:
           echo "config.php:    $(curl -s -o /dev/null -w '%{http_code}' https://webshortcut.net/config.php)"
           echo "logs/:         $(curl -s -o /dev/null -w '%{http_code}' https://webshortcut.net/logs/)"
           echo "wp-login.php:  $(curl -s -o /dev/null -w '%{http_code}' https://webshortcut.net/wp-login.php)"
-          echo "_old_wordpress: $(curl -s -o /dev/null -w '%{http_code}' https://webshortcut.net/_old_wordpress/wp-login.php)"
+          echo "wp-admin/:     $(curl -s -o /dev/null -w '%{http_code}' https://webshortcut.net/wp-admin/)"
+          echo "contact form:  $(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Origin: https://evil.example' https://webshortcut.net/send_email.php) (403 expected)"
           echo "security.txt:  $(curl -s -o /dev/null -w '%{http_code}' https://webshortcut.net/.well-known/security.txt)"
           echo "--- headers ---"
           curl -sI https://webshortcut.net/ | grep -iE '^(strict-transport|content-security|x-frame|x-content-type|referrer-policy|permissions-policy)'
