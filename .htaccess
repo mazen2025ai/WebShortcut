@@ -1,0 +1,59 @@
+# ============================================================
+# WebShortcut — Apache hardening (cPanel / shared hosting)
+# Added 2026-10-27 after the boxmind.ai external assessment.
+# ============================================================
+
+Options -Indexes
+ServerSignature Off
+
+# ---- Only GET / POST / HEAD. (TRACE is answered by the Apache core before rewrite rules run;
+#      it needs "TraceEnable off" in the server config, which cPanel sets by default.) ----
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{REQUEST_METHOD} !^(GET|POST|HEAD)$ [NC]
+  RewriteRule .* - [F,L]
+
+  # ---- Force HTTPS. Works both direct and behind Cloudflare (X-Forwarded-Proto). Skipped on localhost. ----
+  RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:\d+)?$ [NC]
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+  RewriteCond %{HTTP:CF-Visitor} !"scheme":"https"
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L,NE]
+
+  # ---- Reject back-slash / encoded back-slash paths outright (the boxmind.ai open-redirect shape). ----
+  RewriteCond %{THE_REQUEST} (\\|%5c) [NC]
+  RewriteRule .* - [F,L]
+</IfModule>
+
+# ---- Never serve these over the web ----
+<FilesMatch "^(config\.php|config\.example\.php|composer\.json|composer\.lock|CLAUDE\.md|Golden_Rules\.md|README\.md|\.gitignore|\.htaccess)$">
+  Require all denied
+</FilesMatch>
+<FilesMatch "\.(log|md|json|lock|sql|bak|old|tmp|ini|env)$">
+  Require all denied
+</FilesMatch>
+RedirectMatch 404 (^|/)(\.git|logs|vendor|docs)(/|$)
+
+# ---- Security headers ----
+<IfModule mod_headers.c>
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "DENY"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; frame-src https://www.google.com; connect-src 'self'; form-action 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests"
+  Header always unset X-Powered-By
+</IfModule>
+
+# ---- Static asset caching (images, CSS, JS are cache-busted with ?v=) ----
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType image/jpeg "access plus 30 days"
+  ExpiresByType image/png  "access plus 30 days"
+  ExpiresByType image/gif  "access plus 30 days"
+  ExpiresByType image/svg+xml "access plus 30 days"
+  ExpiresByType text/css "access plus 7 days"
+  ExpiresByType application/javascript "access plus 7 days"
+</IfModule>
+
+AddDefaultCharset UTF-8

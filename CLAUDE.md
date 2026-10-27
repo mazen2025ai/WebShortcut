@@ -21,8 +21,14 @@ Language:     HTML5, CSS3, vanilla JS (ES5-compatible style), PHP 7.4+ for the m
 Frameworks:   none · no bundler · fonts from Google Fonts · PHPMailer in vendor/
 Local URL:    http://localhost/WebShortcut/
 index.html    the page · css/style.css · js/main.js · send_email.php · config.example.php
+.htaccess     HTTPS redirect, method allow-list, file/folder denials, security headers incl. CSP (keep CSP in sync when adding external resources)
+.well-known/security.txt   vulnerability-disclosure contact (expires 2027-10-27, renew)
 images/       reused photos and the nine client logos · docs/CONTENT_MIGRATION.md explains every content decision
+docs/SECURITY_CHECK.md     2026-10-27 check against the boxmind.ai pentest: findings on the live hosts and host-level actions still open
 ```
+
+- **Mailer protections:** same-origin check (403), rate limit 3 per IP per 10 min (429, files in `logs/rl_*.txt`), honeypot. Keep all three.
+- **mod_headers is disabled in WAMP**, so security headers cannot be seen locally; test them on the host after deploy.
 
 ## 4. Conventions
 

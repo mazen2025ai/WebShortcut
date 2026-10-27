@@ -38,6 +38,41 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+// Same-origin check (CSRF defence for a static page): a browser sends Origin on every
+// cross-site POST, so a mismatched Origin or Referer is rejected. Absent headers
+// (non-browser clients) fall through to the rate limiter.
+$selfHost = strtolower(preg_replace('/:\d+$/', '', $_SERVER['HTTP_HOST'] ?? ''));
+foreach (['HTTP_ORIGIN', 'HTTP_REFERER'] as $hdr) {
+    if (!empty($_SERVER[$hdr])) {
+        $srcHost = strtolower((string) parse_url($_SERVER[$hdr], PHP_URL_HOST));
+        if ($srcHost !== $selfHost) {
+            logEvent('ORIGIN', "Rejected cross-site POST from {$srcHost}", ['header' => $hdr]);
+            http_response_code(403);
+            echo json_encode(['success' => false, 'message' => 'Request rejected.']);
+            exit;
+        }
+    }
+}
+
+// Rate limit: RATE_LIMIT_MAX submissions per IP per RATE_LIMIT_WINDOW seconds (file-based, no DB).
+define('RATE_LIMIT_MAX', 3);
+define('RATE_LIMIT_WINDOW', 600);
+$rlFile = __DIR__ . '/logs/rl_' . md5($_SERVER['REMOTE_ADDR'] ?? 'unknown') . '.txt';
+$now = time();
+$hits = [];
+if (is_file($rlFile)) {
+    $hits = array_filter(array_map('intval', file($rlFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES)),
+        function ($t) use ($now) { return $t > $now - RATE_LIMIT_WINDOW; });
+}
+if (count($hits) >= RATE_LIMIT_MAX) {
+    logEvent('RATE_LIMIT', 'Too many submissions', ['hits_in_window' => count($hits)]);
+    http_response_code(429);
+    echo json_encode(['success' => false, 'message' => 'Too many messages in a short time. Please try again in a few minutes or call +961 1 648 440.']);
+    exit;
+}
+$hits[] = $now;
+file_put_contents($rlFile, implode(PHP_EOL, $hits) . PHP_EOL, LOCK_EX);
+
 // Honeypot: real users never fill the hidden "website" field.
 if (!empty($_POST['website'])) {
     logEvent('SPAM', 'Honeypot field filled');
