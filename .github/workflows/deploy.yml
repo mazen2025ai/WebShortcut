@@ -112,7 +112,7 @@ jobs:
           cls -la
           quit
           EOF
-          lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -f /tmp/archive.lftp
+          lftp -u "$FTP_USER","$FTP_PASS" -e "source /tmp/archive.lftp" "$FTP_HOST"
           echo "WordPress files moved to /public_html_old_wordpress, outside the web root (a missing file just prints an error and continues)."
 
       - name: Sync the site to public_html via FTPS
