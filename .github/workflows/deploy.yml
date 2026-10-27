@@ -167,7 +167,7 @@ jobs:
           echo "logs/:         $(curl -s -A "$UA" -o /dev/null -w '%{http_code}' https://webshortcut.net/logs/)"
           echo "wp-login.php:  $(curl -s -A "$UA" -o /dev/null -w '%{http_code}' https://webshortcut.net/wp-login.php)"
           echo "wp-admin/:     $(curl -s -A "$UA" -o /dev/null -w '%{http_code}' https://webshortcut.net/wp-admin/)"
-          echo "contact form:  $(curl -s -A "$UA" -o /dev/null -w '%{http_code}' -X POST -H 'Origin: https://evil.example' https://webshortcut.net/send_email.php) (403 expected)"
+          echo "contact form:  $(curl -s -A "$UA" -o /dev/null -w '%{http_code}' -X POST -H 'Origin: https://evil.example' -d 'name=check' https://webshortcut.net/send_email.php) (403 expected)"
           echo "security.txt:  $(curl -s -A "$UA" -o /dev/null -w '%{http_code}' https://webshortcut.net/.well-known/security.txt)"
           echo "--- headers ---"
           curl -sI -A "$UA" https://webshortcut.net/ | grep -iE '^(strict-transport|content-security|x-frame|x-content-type|referrer-policy|permissions-policy)'
