@@ -5,6 +5,8 @@
 
 Options -Indexes
 ServerSignature Off
+# The site is index.html; make sure it wins over any index.php left on the server.
+DirectoryIndex index.html index.php
 
 # ---- Only GET / POST / HEAD. (TRACE is answered by the Apache core before rewrite rules run;
 #      it needs "TraceEnable off" in the server config, which cPanel sets by default.) ----

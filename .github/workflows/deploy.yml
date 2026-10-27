@@ -1,0 +1,153 @@
+# ─────────────────────────────────────────────────────────────────────────
+# WebShortcut — Deploy to webshortcut.net via FTPS
+#
+# Replaces the old WordPress site in public_html with this static site.
+# MANUAL ONLY: run it from the Actions tab. Every run is a production release.
+#
+# Inputs
+#   dry_run           true  → print what WOULD be uploaded, change nothing (default)
+#                     false → really upload
+#   archive_wordpress true  → before uploading, MOVE the WordPress files out of
+#                             public_html into public_html_old_wordpress/ so that
+#                             wp-login.php, xmlrpc.php, wp-admin/ … stop being served.
+#                             Nothing is deleted; the folder can be moved back.
+#
+# Required secrets (Settings → Secrets and variables → Actions):
+#   FTP_ADDRESS, FTP_USER, FTP_PASS      (same names as the DocMind / brandMind repos)
+#
+# Never uploaded: config.php (created on the server by hand), logs/, docs/, *.md,
+# .git, .github, composer files, IDE and OS junk.
+# ─────────────────────────────────────────────────────────────────────────
+name: Deploy WebShortcut to webshortcut.net
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (true = show what would upload, nothing changes)'
+        required: true
+        default: 'true'
+        type: choice
+        options: ['true', 'false']
+      archive_wordpress:
+        description: 'Move the old WordPress files to public_html_old_wordpress/ first'
+        required: true
+        default: 'false'
+        type: choice
+        options: ['true', 'false']
+
+concurrency:
+  group: deploy-webshortcut
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: FTPS Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Sanity check the files that must be present
+        run: |
+          test -f index.html && test -f .htaccess && test -f send_email.php && test -f vendor/autoload.php
+          test ! -f config.php || { echo "config.php must never be in the repo"; exit 1; }
+          echo "OK: index.html, .htaccess, send_email.php, vendor/ present; config.php absent"
+
+      - name: Archive the old WordPress files (move aside, never delete)
+        if: ${{ github.event.inputs.archive_wordpress == 'true' && github.event.inputs.dry_run == 'false' }}
+        env:
+          FTP_HOST: ${{ secrets.FTP_ADDRESS }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASS: ${{ secrets.FTP_PASS }}
+        run: |
+          sudo apt-get install -y -qq lftp > /dev/null
+          cat > /tmp/archive.lftp <<'EOF'
+          set ssl:verify-certificate no
+          set ftp:ssl-force true
+          set cmd:fail-exit false
+          mkdir -p /public_html_old_wordpress
+          cd /public_html
+          mv wp-admin    /public_html_old_wordpress/wp-admin
+          mv wp-includes /public_html_old_wordpress/wp-includes
+          mv wp-content  /public_html_old_wordpress/wp-content
+          mv index.php              /public_html_old_wordpress/index.php
+          mv .htaccess              /public_html_old_wordpress/.htaccess
+          mv wp-config.php          /public_html_old_wordpress/wp-config.php
+          mv wp-config-sample.php   /public_html_old_wordpress/wp-config-sample.php
+          mv wp-login.php           /public_html_old_wordpress/wp-login.php
+          mv wp-load.php            /public_html_old_wordpress/wp-load.php
+          mv wp-settings.php        /public_html_old_wordpress/wp-settings.php
+          mv wp-blog-header.php     /public_html_old_wordpress/wp-blog-header.php
+          mv wp-cron.php            /public_html_old_wordpress/wp-cron.php
+          mv wp-activate.php        /public_html_old_wordpress/wp-activate.php
+          mv wp-comments-post.php   /public_html_old_wordpress/wp-comments-post.php
+          mv wp-links-opml.php      /public_html_old_wordpress/wp-links-opml.php
+          mv wp-mail.php            /public_html_old_wordpress/wp-mail.php
+          mv wp-signup.php          /public_html_old_wordpress/wp-signup.php
+          mv wp-trackback.php       /public_html_old_wordpress/wp-trackback.php
+          mv xmlrpc.php             /public_html_old_wordpress/xmlrpc.php
+          mv readme.html            /public_html_old_wordpress/readme.html
+          mv license.txt            /public_html_old_wordpress/license.txt
+          echo "--- public_html after archiving ---"
+          cls -la
+          quit
+          EOF
+          lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" -f /tmp/archive.lftp
+          echo "WordPress files moved to /public_html_old_wordpress (a missing file just prints an error and continues)."
+
+      - name: Sync the site to public_html via FTPS
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_ADDRESS }}
+          username: ${{ secrets.FTP_USER }}
+          password: ${{ secrets.FTP_PASS }}
+          protocol: ftps
+          local-dir: ./
+          server-dir: /public_html/
+          dry-run: ${{ github.event.inputs.dry_run == 'true' }}
+          exclude: |
+            .git*
+            **/.git*
+            **/.git*/**
+            .github/**
+            **/.github/**
+            .claude/**
+            .vscode/**
+            .idea/**
+            node_modules/**
+            composer.json
+            composer.lock
+            config.php
+            **/config.php
+            docs/**
+            **/docs/**
+            logs/**
+            **/logs/**
+            *.md
+            **/*.md
+            *.swp
+            *.swo
+            *.bak
+            *.tmp
+            *.log
+            **/*.log
+            desktop.ini
+            Thumbs.db
+            .DS_Store
+
+      - name: Post-deploy checks (live site)
+        if: ${{ github.event.inputs.dry_run == 'false' }}
+        run: |
+          sleep 5
+          echo "home:          $(curl -s -o /dev/null -w '%{http_code}' https://webshortcut.net/)"
+          echo "title:         $(curl -s https://webshortcut.net/ | grep -oE '<title>[^<]*' | head -1)"
+          echo "http->https:   $(curl -s -o /dev/null -w '%{http_code} -> %{redirect_url}' http://webshortcut.net/)"
+          echo "config.php:    $(curl -s -o /dev/null -w '%{http_code}' https://webshortcut.net/config.php)"
+          echo "logs/:         $(curl -s -o /dev/null -w '%{http_code}' https://webshortcut.net/logs/)"
+          echo "wp-login.php:  $(curl -s -o /dev/null -w '%{http_code}' https://webshortcut.net/wp-login.php)"
+          echo "security.txt:  $(curl -s -o /dev/null -w '%{http_code}' https://webshortcut.net/.well-known/security.txt)"
+          echo "--- headers ---"
+          curl -sI https://webshortcut.net/ | grep -iE '^(strict-transport|content-security|x-frame|x-content-type|referrer-policy|permissions-policy)'
+          echo "Remember: create /public_html/config.php on the server by hand (see config.example.php)."
